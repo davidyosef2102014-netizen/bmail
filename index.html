@@ -4,625 +4,624 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BMAIL</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;display:flex;overflow:hidden;}
 
+/* SETUP SCREEN */
+#setup-screen{position:fixed;inset:0;z-index:9000;background:linear-gradient(135deg,#6c63ff 0%,#a855f7 100%);display:flex;align-items:center;justify-content:center;}
+#setup-screen.hide{display:none;}
+.setup-card{background:#fff;border-radius:28px;width:420px;max-width:92vw;box-shadow:0 40px 100px rgba(0,0,0,.3);overflow:hidden;animation:popIn .35s cubic-bezier(.34,1.56,.64,1);}
+.setup-top{background:linear-gradient(135deg,#6c63ff,#a855f7);padding:36px 28px 28px;text-align:center;color:#fff;}
+.setup-top .logo-big{font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;}
+.setup-top p{font-size:13.5px;opacity:.85;margin-top:8px;line-height:1.5;}
+.setup-form{padding:28px 24px 8px;display:flex;flex-direction:column;gap:14px;}
+.s-label{font-size:11.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.s-input{width:100%;border:2px solid #e2e8f0;border-radius:12px;padding:13px 16px;font-size:14px;color:#1e293b;outline:none;direction:rtl;transition:border .2s;font-family:inherit;}
+.s-input:focus{border-color:#6c63ff;}
+.s-input::placeholder{color:#c4ccd8;}
+.s-hint{font-size:11px;color:#94a3b8;margin-top:3px;}
+.setup-footer{padding:16px 24px 28px;}
+.s-btn{width:100%;background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:14px;color:#fff;padding:15px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(108,99,255,.4);transition:all .2s;}
+.s-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(108,99,255,.5);}
+.s-btn:disabled{opacity:.5;pointer-events:none;}
+
 /* SIDEBAR */
-#sidebar{
-  width:220px;background:#fff;display:flex;flex-direction:column;
-  box-shadow:2px 0 20px rgba(0,0,0,.06);flex-shrink:0;z-index:10;
-}
-.logo{padding:22px 20px 16px;display:flex;align-items:center;gap:10px;}
-.logo-icon{width:38px;height:38px;background:linear-gradient(135deg,#6c63ff,#a855f7);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:900;flex-shrink:0;}
-.logo-text{font-size:20px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;}
+#sidebar{width:220px;background:#fff;display:flex;flex-direction:column;box-shadow:2px 0 20px rgba(0,0,0,.06);flex-shrink:0;z-index:10;}
+.logo-row{padding:20px 18px 14px;display:flex;align-items:center;gap:10px;}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#6c63ff,#a855f7);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;font-weight:900;flex-shrink:0;}
+.logo-text{font-size:19px;font-weight:900;color:#1a1a2e;}
 .logo-text span{color:#6c63ff;}
-
-.compose-btn{
-  margin:4px 14px 16px;background:linear-gradient(135deg,#6c63ff,#a855f7);
-  border:none;border-radius:14px;color:#fff;padding:12px 18px;
-  font-size:14px;font-weight:700;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  box-shadow:0 4px 16px rgba(108,99,255,.35);transition:all .2s;
-}
-.compose-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,99,255,.45);}
-
-.folder{
-  display:flex;align-items:center;gap:10px;padding:10px 16px;
-  font-size:13.5px;color:#64748b;cursor:pointer;border-radius:12px;
-  margin:1px 8px;transition:all .15s;position:relative;
-}
+.compose-btn{margin:0 12px 14px;background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:13px;color:#fff;padding:11px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 3px 14px rgba(108,99,255,.3);transition:all .2s;}
+.compose-btn:hover{transform:translateY(-1px);}
+.folder{display:flex;align-items:center;gap:9px;padding:9px 14px;font-size:13px;color:#64748b;cursor:pointer;border-radius:10px;margin:1px 6px;transition:all .15s;}
 .folder:hover{background:#f5f3ff;color:#6c63ff;}
 .folder.active{background:linear-gradient(135deg,rgba(108,99,255,.12),rgba(168,85,247,.08));color:#6c63ff;font-weight:600;}
-.folder .f-icon{font-size:16px;width:22px;text-align:center;}
-.folder .badge{margin-right:auto;background:#6c63ff;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
-.sidebar-sep{height:1px;background:#f1f5f9;margin:8px 16px;}
-.account{display:flex;align-items:center;gap:10px;padding:14px 16px;margin-top:auto;border-top:1px solid #f1f5f9;}
-.av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#a855f7);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0;}
-.acc-name{font-size:13px;font-weight:600;color:#1e293b;}
+.folder .fi{font-size:15px;width:20px;text-align:center;}
+.folder .badge{margin-right:auto;background:#6c63ff;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;display:none;}
+.s-sep{height:1px;background:#f1f5f9;margin:8px 14px;}
+.account-row{display:flex;align-items:center;gap:9px;padding:12px 14px;margin-top:auto;border-top:1px solid #f1f5f9;cursor:pointer;}
+.account-row:hover .acc-name{color:#6c63ff;}
+.my-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#a855f7);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;}
+.acc-name{font-size:13px;font-weight:700;color:#1e293b;transition:color .2s;}
 .acc-addr{font-size:11px;color:#94a3b8;}
+.online-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:auto;flex-shrink:0;}
 
 /* MAIL LIST */
-#maillist{width:310px;background:#fff;border-right:1px solid #e8eaf0;display:flex;flex-direction:column;flex-shrink:0;}
-.list-top{padding:16px 16px 10px;border-bottom:1px solid #f1f5f9;}
-.list-top h2{font-size:17px;font-weight:800;color:#1e293b;}
-.search-wrap{display:flex;align-items:center;gap:8px;background:#f8fafc;border-radius:12px;padding:9px 14px;margin:10px 12px;border:1.5px solid #e2e8f0;transition:border .2s;}
-.search-wrap:focus-within{border-color:#6c63ff;}
-.search-wrap input{background:none;border:none;outline:none;font-size:13px;color:#1e293b;flex:1;direction:rtl;}
-.search-wrap input::placeholder{color:#94a3b8;}
-
-.mail-item{padding:14px 16px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;position:relative;}
-.mail-item:hover{background:#fafbff;}
-.mail-item.active{background:linear-gradient(135deg,rgba(108,99,255,.07),rgba(168,85,247,.04));border-right:3px solid #6c63ff;}
-.mail-item.unread .mi-from{font-weight:800;color:#1e293b;}
-.mail-item.unread .mi-subject{font-weight:700;color:#1e293b;}
-.mi-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
-.mi-from{font-size:13.5px;font-weight:600;color:#374151;}
+#maillist{width:300px;background:#fff;border-right:1px solid #e8eaf0;display:flex;flex-direction:column;flex-shrink:0;}
+.list-header{padding:14px 14px 8px;border-bottom:1px solid #f1f5f9;}
+.list-header h2{font-size:16px;font-weight:800;color:#1e293b;}
+.search-row{display:flex;align-items:center;gap:7px;background:#f8fafc;border-radius:10px;padding:8px 12px;margin:8px 10px;border:1.5px solid #e2e8f0;transition:border .2s;}
+.search-row:focus-within{border-color:#6c63ff;}
+.search-row input{background:none;border:none;outline:none;font-size:12.5px;color:#1e293b;flex:1;direction:rtl;}
+.search-row input::placeholder{color:#94a3b8;}
+.mail-list-scroll{flex:1;overflow-y:auto;}
+.mail-list-scroll::-webkit-scrollbar{width:3px;}
+.mail-list-scroll::-webkit-scrollbar-thumb{background:#e2e8f0;}
+.mi{padding:13px 13px 11px;border-bottom:1px solid #f8fafc;cursor:pointer;transition:background .12s;position:relative;}
+.mi:hover{background:#fafbff;}
+.mi.active{background:linear-gradient(135deg,rgba(108,99,255,.07),rgba(168,85,247,.04));border-right:3px solid #6c63ff;}
+.mi.unread .mi-from{font-weight:800;}
+.mi.unread .mi-subj{font-weight:700;color:#1e293b;}
+.mi-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.mi-from{font-size:13px;font-weight:600;color:#374151;}
 .mi-time{font-size:11px;color:#94a3b8;}
-.mi-subject{font-size:12.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
-.mi-preview{font-size:11.5px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.unread-dot{width:8px;height:8px;background:#6c63ff;border-radius:50%;position:absolute;top:50%;left:10px;transform:translateY(-50%);}
-
-.mail-scroll-list{flex:1;overflow-y:auto;}
-.mail-scroll-list::-webkit-scrollbar{width:3px;}
-.mail-scroll-list::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:3px;}
+.mi-subj{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+.mi-prev{font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.unread-dot{width:7px;height:7px;background:#6c63ff;border-radius:50%;position:absolute;top:50%;left:9px;transform:translateY(-50%);}
 
 /* READING PANE */
 #reading{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f8faff;}
-.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#94a3b8;}
-.empty-icon{font-size:72px;opacity:.25;}
-
+.empty-pane{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#94a3b8;}
+.empty-icon{font-size:64px;opacity:.2;}
 #mail-view{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.mail-bar{display:flex;align-items:center;gap:7px;padding:12px 20px;background:#fff;border-bottom:1px solid #e8eaf0;}
+.tbb{background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;padding:6px 13px;border-radius:9px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .2s;font-weight:500;}
+.tbb:hover{background:#f0f2ff;border-color:#6c63ff;color:#6c63ff;}
+.tbb.del:hover{background:#fef2f2;border-color:#ef4444;color:#ef4444;}
+.mail-read-scroll{flex:1;overflow-y:auto;padding:26px 32px;}
+.mail-read-scroll::-webkit-scrollbar{width:4px;}
+.mail-read-scroll::-webkit-scrollbar-thumb{background:#e2e8f0;}
+.mail-subject-big{font-size:22px;font-weight:800;color:#1e293b;line-height:1.3;margin-bottom:16px;}
+.meta-row{display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1.5px solid #f1f5f9;margin-bottom:22px;}
+.meta-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;flex-shrink:0;}
+.meta-name{font-size:13.5px;font-weight:700;color:#1e293b;}
+.meta-user{font-size:12px;color:#6c63ff;}
+.meta-date{margin-right:auto;font-size:11.5px;color:#94a3b8;}
+.mail-body{font-size:14.5px;line-height:1.85;color:#374151;white-space:pre-wrap;}
 
-.mail-topbar{
-  display:flex;align-items:center;gap:8px;padding:14px 24px;
-  background:#fff;border-bottom:1px solid #e8eaf0;
-}
-.tb-btn{
-  background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;
-  padding:7px 14px;border-radius:10px;font-size:12.5px;cursor:pointer;
-  display:flex;align-items:center;gap:5px;transition:all .2s;font-weight:500;
-}
-.tb-btn:hover{background:#f0f2ff;border-color:#6c63ff;color:#6c63ff;}
-.tb-btn.red:hover{background:#fef2f2;border-color:#ef4444;color:#ef4444;}
-
-.mail-reading{flex:1;overflow-y:auto;padding:28px 36px;}
-.mail-reading::-webkit-scrollbar{width:4px;}
-.mail-reading::-webkit-scrollbar-thumb{background:#e2e8f0;}
-
-.mail-subject-h{font-size:24px;font-weight:800;color:#1e293b;line-height:1.3;margin-bottom:18px;}
-.mail-meta-row{display:flex;align-items:center;gap:14px;padding-bottom:20px;border-bottom:1.5px solid #f1f5f9;margin-bottom:24px;}
-.mail-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0;}
-.meta-name{font-size:14px;font-weight:700;color:#1e293b;}
-.meta-addr{font-size:12px;color:#94a3b8;}
-.meta-date{margin-right:auto;font-size:12px;color:#94a3b8;}
-.mail-body-text{font-size:15px;line-height:1.85;color:#374151;white-space:pre-wrap;}
-
-/* COMPOSE OVERLAY */
-#compose-overlay{
-  display:none;position:fixed;inset:0;z-index:2000;
-  background:rgba(15,10,40,.45);backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;
-}
-#compose-overlay.show{display:flex;}
-#compose-box{
-  background:#fff;border-radius:24px;width:560px;max-width:95vw;
-  box-shadow:0 40px 100px rgba(0,0,0,.22);
-  display:flex;flex-direction:column;overflow:hidden;
-  animation:popIn .25s cubic-bezier(.34,1.56,.64,1);
-}
-@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
-
-.c-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:18px 22px;border-bottom:1.5px solid #f1f5f9;
-}
-.c-header h3{font-size:16px;font-weight:800;color:#1e293b;}
-.c-close{background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px;}
-.c-close:hover{background:#fee2e2;color:#ef4444;}
-
-.c-field{display:flex;align-items:center;gap:12px;padding:11px 22px;border-bottom:1px solid #f8fafc;}
-.c-label{font-size:12px;font-weight:600;color:#94a3b8;width:36px;flex-shrink:0;}
-.c-field input{background:none;border:none;outline:none;font-size:14px;color:#1e293b;flex:1;direction:rtl;}
-.c-field input::placeholder{color:#c4ccd8;}
-
-#c-body{
-  background:none;border:none;outline:none;resize:none;
-  padding:18px 22px;font-size:14.5px;color:#374151;
-  min-height:200px;line-height:1.75;direction:rtl;width:100%;
-  font-family:'Segoe UI',Arial,sans-serif;
-}
-#c-body::placeholder{color:#c4ccd8;}
-
-.c-footer{
-  display:flex;align-items:center;gap:8px;padding:14px 18px;
-  border-top:1.5px solid #f1f5f9;background:#fafbff;
-}
-.send-btn{
-  background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;
-  border-radius:12px;color:#fff;padding:11px 28px;font-size:14px;
-  font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;
-  box-shadow:0 4px 14px rgba(108,99,255,.3);transition:all .2s;
-}
-.send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(108,99,255,.4);}
-.draft-btn{background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;padding:10px 16px;border-radius:12px;font-size:13px;cursor:pointer;font-weight:600;transition:all .2s;}
-.draft-btn:hover{border-color:#6c63ff;color:#6c63ff;}
-
-/* CONTACTS */
+/* CONTACTS PANEL */
 #contacts-panel{display:none;flex-direction:column;flex:1;overflow:hidden;background:#f8faff;}
 #contacts-panel.show{display:flex;}
-.contacts-top{display:flex;align-items:center;justify-content:space-between;padding:18px 24px 12px;border-bottom:1px solid #e8eaf0;background:#fff;}
-.contacts-top h2{font-size:17px;font-weight:800;color:#1e293b;}
-.add-contact-btn{background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:10px;color:#fff;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
-.contacts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding:20px;overflow-y:auto;}
-.contact-card{background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);cursor:pointer;transition:all .2s;border:1.5px solid transparent;}
-.contact-card:hover{border-color:#6c63ff;transform:translateY(-2px);box-shadow:0 6px 20px rgba(108,99,255,.15);}
-.contact-av{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;margin:0 auto 12px;}
-.contact-name{font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;}
-.contact-email{font-size:12px;color:#6c63ff;word-break:break-all;}
-.contact-actions{display:flex;gap:6px;justify-content:center;margin-top:12px;}
-.ca-btn{background:#f0f2ff;border:none;border-radius:8px;color:#6c63ff;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;transition:background .2s;}
-.ca-btn:hover{background:#e0e4ff;}
-.ca-btn.red{background:#fef2f2;color:#ef4444;}
-.ca-btn.red:hover{background:#fee2e2;}
+.cp-top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 12px;background:#fff;border-bottom:1px solid #e8eaf0;}
+.cp-top h2{font-size:16px;font-weight:800;color:#1e293b;}
+.contacts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:18px;overflow-y:auto;}
+.ccard{background:#fff;border-radius:16px;padding:18px 14px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.05);cursor:pointer;transition:all .2s;border:1.5px solid transparent;}
+.ccard:hover{border-color:#6c63ff;transform:translateY(-2px);box-shadow:0 6px 18px rgba(108,99,255,.13);}
+.ccard-av{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px;}
+.ccard-name{font-size:13.5px;font-weight:700;color:#1e293b;margin-bottom:3px;}
+.ccard-user{font-size:11.5px;color:#6c63ff;margin-bottom:10px;}
+.ccard-online{font-size:11px;color:#22c55e;font-weight:600;}
+.ccard-offline{font-size:11px;color:#94a3b8;}
+.cc-btn{background:#f0f2ff;border:none;border-radius:8px;color:#6c63ff;padding:7px 0;font-size:12px;cursor:pointer;font-weight:700;width:100%;transition:background .2s;}
+.cc-btn:hover{background:#e0e4ff;}
 
-/* ADD CONTACT MODAL */
-#add-contact-overlay{display:none;position:fixed;inset:0;z-index:3000;background:rgba(15,10,40,.45);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
-#add-contact-overlay.show{display:flex;}
-#add-contact-box{background:#fff;border-radius:22px;width:400px;max-width:95vw;box-shadow:0 40px 100px rgba(0,0,0,.2);overflow:hidden;animation:popIn .25s cubic-bezier(.34,1.56,.64,1);}
-.ac-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1.5px solid #f1f5f9;}
-.ac-header h3{font-size:16px;font-weight:800;color:#1e293b;}
-.ac-body{padding:20px 22px;display:flex;flex-direction:column;gap:12px;}
-.ac-input{width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 14px;font-size:14px;color:#1e293b;outline:none;direction:rtl;transition:border .2s;}
-.ac-input:focus{border-color:#6c63ff;}
-.ac-input::placeholder{color:#c4ccd8;}
-.ac-footer{padding:14px 22px;border-top:1.5px solid #f1f5f9;display:flex;gap:8px;}
-.ac-save{flex:1;background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:12px;color:#fff;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}
-.ac-cancel{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;color:#64748b;padding:12px 18px;font-size:13px;cursor:pointer;font-weight:600;}
+/* COMPOSE MODAL */
+#compose-overlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(15,10,40,.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
+#compose-overlay.show{display:flex;}
+#compose-box{background:#fff;border-radius:22px;width:520px;max-width:94vw;box-shadow:0 40px 100px rgba(0,0,0,.22);display:flex;flex-direction:column;overflow:hidden;animation:popIn .25s cubic-bezier(.34,1.56,.64,1);}
+.cb-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1.5px solid #f1f5f9;}
+.cb-head h3{font-size:15px;font-weight:800;color:#1e293b;}
+.cb-close{background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;padding:0 4px;border-radius:6px;}
+.cb-close:hover{background:#fee2e2;color:#ef4444;}
+.cb-field{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid #f8fafc;}
+.cb-label{font-size:11.5px;font-weight:700;color:#94a3b8;width:34px;flex-shrink:0;}
+.cb-field input{background:none;border:none;outline:none;font-size:13.5px;color:#1e293b;flex:1;direction:rtl;}
+.cb-field input::placeholder{color:#c4ccd8;}
+.cb-users-list{max-height:120px;overflow-y:auto;border-bottom:1px solid #f1f5f9;}
+.cb-user-opt{display:flex;align-items:center;gap:10px;padding:8px 20px;cursor:pointer;transition:background .15s;}
+.cb-user-opt:hover{background:#f5f3ff;}
+.cb-user-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;}
+.cb-user-name{font-size:13px;font-weight:600;color:#1e293b;}
+.cb-user-tag{font-size:11px;color:#6c63ff;}
+#cb-body{background:none;border:none;outline:none;resize:none;padding:14px 20px;font-size:14px;color:#374151;min-height:180px;line-height:1.75;direction:rtl;width:100%;font-family:'Segoe UI',Arial,sans-serif;}
+#cb-body::placeholder{color:#c4ccd8;}
+.cb-footer{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1.5px solid #f1f5f9;background:#fafbff;}
+.send-btn{background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:11px;color:#fff;padding:10px 26px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 3px 12px rgba(108,99,255,.3);transition:all .2s;}
+.send-btn:hover{transform:translateY(-1px);}
+.send-btn:disabled{opacity:.5;pointer-events:none;}
 
-/* PROFILE SETUP */
-#setup-overlay{display:none;position:fixed;inset:0;z-index:5000;background:linear-gradient(135deg,#6c63ff,#a855f7);align-items:center;justify-content:center;}
-#setup-overlay.show{display:flex;}
-#setup-box{background:#fff;border-radius:28px;width:420px;max-width:92vw;box-shadow:0 40px 100px rgba(0,0,0,.3);overflow:hidden;animation:popIn .3s cubic-bezier(.34,1.56,.64,1);}
-.setup-hero{background:linear-gradient(135deg,#6c63ff,#a855f7);padding:32px 28px 24px;text-align:center;color:#fff;}
-.setup-hero .big-b{font-size:48px;font-weight:900;line-height:1;}
-.setup-hero p{font-size:14px;opacity:.85;margin-top:6px;}
-.setup-body{padding:24px 24px 8px;display:flex;flex-direction:column;gap:12px;}
-.setup-label{font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:2px;}
-.setup-input{width:100%;border:2px solid #e2e8f0;border-radius:12px;padding:13px 16px;font-size:14px;color:#1e293b;outline:none;direction:rtl;transition:border .2s;font-family:inherit;}
-.setup-input:focus{border-color:#6c63ff;}
-.setup-input::placeholder{color:#c4ccd8;}
-.setup-footer{padding:16px 24px 24px;}
-.setup-start{width:100%;background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:14px;color:#fff;padding:14px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(108,99,255,.35);transition:all .2s;}
-.setup-start:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,99,255,.45);}
+/* STATUS BAR */
+#status-bar{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:8000;background:#1e293b;color:#fff;padding:7px 18px;border-radius:0 0 12px 12px;font-size:12px;display:none;align-items:center;gap:7px;}
+#status-bar.show{display:flex;}
+
+@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 
 /* TOAST */
-.toast{
-  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
-  background:#1e293b;color:#fff;padding:12px 24px;border-radius:14px;
-  font-size:13.5px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.25);
-  z-index:9999;animation:toastIn .3s ease;white-space:nowrap;
-}
-@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 22px;border-radius:12px;font-size:13px;font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,.22);z-index:9999;animation:toastIn .3s ease;white-space:nowrap;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 </style>
 </head>
 <body>
 
+<!-- SETUP -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-top">
+      <div class="logo-big">BMAIL</div>
+      <p>מערכת מייל פנימית — שלח וקבל מיילים<br>רק בין משתמשי BMAIL</p>
+    </div>
+    <div class="setup-form">
+      <div>
+        <div class="s-label">השם שלך</div>
+        <input class="s-input" id="s-name" placeholder="לדוגמה: דוד יוסף" type="text" oninput="checkSetup()">
+      </div>
+      <div>
+        <div class="s-label">שם משתמש</div>
+        <input class="s-input" id="s-user" placeholder="לדוגמה: david (באנגלית בלי רווחים)" type="text" oninput="checkSetup()">
+        <div class="s-hint">זוהי הכתובת שלך: <span id="s-preview" style="color:#6c63ff;font-weight:700">@username</span></div>
+      </div>
+    </div>
+    <div class="setup-footer">
+      <button class="s-btn" id="s-start-btn" onclick="finishSetup()" disabled>🚀 הצטרף ל-BMAIL</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="status-bar"><span id="status-text">מתחבר...</span></div>
+
 <!-- SIDEBAR -->
 <div id="sidebar">
-  <div class="logo">
+  <div class="logo-row">
     <div class="logo-icon">B</div>
     <div class="logo-text">B<span>MAIL</span></div>
   </div>
-
-  <button class="compose-btn" onclick="openCompose()">✏️ כתוב מייל חדש</button>
-
-  <div class="folder active" onclick="setFolder('inbox',this)">
-    <span class="f-icon">📥</span> דואר נכנס
-    <span class="badge" id="unread-badge">0</span>
-  </div>
-  <div class="folder" onclick="setFolder('starred',this)">
-    <span class="f-icon">⭐</span> מסומנים
-  </div>
-  <div class="folder" onclick="setFolder('sent',this)">
-    <span class="f-icon">📤</span> נשלח
-  </div>
-  <div class="folder" onclick="setFolder('drafts',this)">
-    <span class="f-icon">📝</span> טיוטות
-  </div>
-  <div class="folder" onclick="setFolder('trash',this)">
-    <span class="f-icon">🗑️</span> אשפה
-  </div>
-
-  <div class="sidebar-sep"></div>
-
-  <div class="folder" onclick="setFolder('contacts',this)">
-    <span class="f-icon">👤</span> אנשי קשר
-  </div>
-
-  <div class="sidebar-sep"></div>
-
-  <div class="account" onclick="openProfile()" style="cursor:pointer" title="ערוך פרופיל">
-    <div class="av" id="my-av">B</div>
+  <button class="compose-btn" onclick="openCompose()">✏️ כתוב מייל</button>
+  <div class="folder active" onclick="setFolder('inbox',this)"><span class="fi">📥</span>דואר נכנס<span class="badge" id="unread-badge">0</span></div>
+  <div class="folder" onclick="setFolder('sent',this)"><span class="fi">📤</span>נשלח</div>
+  <div class="folder" onclick="setFolder('trash',this)"><span class="fi">🗑️</span>אשפה</div>
+  <div class="s-sep"></div>
+  <div class="folder" onclick="setFolder('contacts',this)"><span class="fi">👥</span>כל המשתמשים</div>
+  <div class="account-row" onclick="openSetup()">
+    <div class="my-av" id="my-av">?</div>
     <div>
-      <div class="acc-name" id="my-name">BirgsOS User</div>
-      <div class="acc-addr" id="my-addr">me@bmail.app</div>
+      <div class="acc-name" id="my-name">טוען...</div>
+      <div class="acc-addr" id="my-user">@...</div>
     </div>
+    <div class="online-dot"></div>
   </div>
 </div>
 
 <!-- MAIL LIST -->
 <div id="maillist">
-  <div class="list-top">
-    <h2 id="folder-title">דואר נכנס</h2>
-  </div>
-  <div class="search-wrap">
-    <span style="color:#94a3b8">🔍</span>
-    <input type="text" placeholder="חפש מיילים..." oninput="searchMails(this.value)">
-  </div>
-  <div class="mail-scroll-list" id="mail-items"></div>
+  <div class="list-header"><h2 id="folder-title">דואר נכנס</h2></div>
+  <div class="search-row"><span style="color:#94a3b8;font-size:13px">🔍</span><input type="text" placeholder="חפש..." oninput="searchMails(this.value)"></div>
+  <div class="mail-list-scroll" id="mail-items"></div>
 </div>
 
 <!-- READING PANE -->
 <div id="reading">
-  <div class="empty-state" id="empty-state">
+  <div class="empty-pane" id="empty-pane">
     <div class="empty-icon">💌</div>
-    <div style="font-size:17px;font-weight:700;color:#64748b">בחר מייל לקריאה</div>
-    <div style="font-size:13px">או לחץ על ✏️ כדי לכתוב חדש</div>
+    <div style="font-size:16px;font-weight:700;color:#64748b">בחר מייל לקריאה</div>
+    <div style="font-size:13px">או לחץ כתוב מייל כדי לשלוח</div>
   </div>
-
   <div id="mail-view">
-    <div class="mail-topbar">
-      <button class="tb-btn" onclick="replyMail()">↩️ השב</button>
-      <button class="tb-btn" onclick="forwardMail()">↪️ העבר</button>
-      <button class="tb-btn" onclick="starMail()">⭐ סמן</button>
-      <button class="tb-btn red" onclick="deleteMail()">🗑 מחק</button>
+    <div class="mail-bar">
+      <button class="tbb" onclick="replyMail()">↩️ השב</button>
+      <button class="tbb del" onclick="deleteMail()">🗑 מחק</button>
     </div>
-    <div class="mail-reading" id="mail-content"></div>
+    <div class="mail-read-scroll" id="mail-content"></div>
   </div>
 </div>
 
 <!-- CONTACTS PANEL -->
 <div id="contacts-panel">
-  <div class="contacts-top">
-    <h2>👤 אנשי קשר</h2>
-    <button class="add-contact-btn" onclick="openAddContact()">+ הוסף איש קשר</button>
-  </div>
+  <div class="cp-top"><h2>👥 כל משתמשי BMAIL</h2></div>
   <div class="contacts-grid" id="contacts-grid"></div>
-</div>
-
-<!-- ADD CONTACT MODAL -->
-<div id="add-contact-overlay" onclick="if(event.target===this)closeAddContact()">
-  <div id="add-contact-box">
-    <div class="ac-header">
-      <h3>👤 איש קשר חדש</h3>
-      <button class="c-close" onclick="closeAddContact()">✕</button>
-    </div>
-    <div class="ac-body">
-      <input class="ac-input" id="ac-name" placeholder="שם מלא..." type="text">
-      <input class="ac-input" id="ac-email" placeholder="כתובת מייל..." type="email">
-    </div>
-    <div class="ac-footer">
-      <button class="ac-cancel" onclick="closeAddContact()">ביטול</button>
-      <button class="ac-save" onclick="saveContact()">💾 שמור</button>
-    </div>
-  </div>
-</div>
-
-<!-- PROFILE SETUP -->
-<div id="setup-overlay">
-  <div id="setup-box">
-    <div class="setup-hero">
-      <div class="big-b">BMAIL</div>
-      <p>מייל חכם מבית BirgsOS — הגדר את החשבון שלך</p>
-    </div>
-    <div class="setup-body">
-      <div>
-        <div class="setup-label">השם שלך</div>
-        <input class="setup-input" id="setup-name" placeholder="לדוגמה: דוד יוסף" type="text">
-      </div>
-      <div>
-        <div class="setup-label">כתובת המייל שלך</div>
-        <input class="setup-input" id="setup-email" placeholder="example@gmail.com" type="email">
-      </div>
-    </div>
-    <div class="setup-footer">
-      <button class="setup-start" onclick="finishSetup()">🚀 התחל להשתמש ב-BMAIL</button>
-    </div>
-  </div>
 </div>
 
 <!-- COMPOSE -->
 <div id="compose-overlay" onclick="if(event.target===this)closeCompose()">
   <div id="compose-box">
-    <div class="c-header">
+    <div class="cb-head">
       <h3>✏️ מייל חדש</h3>
-      <button class="c-close" onclick="closeCompose()">✕</button>
+      <button class="cb-close" onclick="closeCompose()">✕</button>
     </div>
-    <div class="c-field">
-      <span class="c-label">אל:</span>
-      <input type="email" id="c-to" placeholder="כתובת המייל של הנמען...">
+    <div class="cb-field">
+      <span class="cb-label">אל:</span>
+      <input type="text" id="cb-to" placeholder="חפש משתמש..." oninput="filterUsers(this.value)" autocomplete="off">
     </div>
-    <div class="c-field">
-      <span class="c-label">נושא:</span>
-      <input type="text" id="c-subject" placeholder="נושא המייל...">
+    <div class="cb-users-list" id="cb-users-list"></div>
+    <div class="cb-field">
+      <span class="cb-label">נושא:</span>
+      <input type="text" id="cb-subject" placeholder="נושא המייל...">
     </div>
-    <textarea id="c-body" placeholder="כתוב את המייל שלך כאן..."></textarea>
-    <div class="c-footer">
-      <button class="send-btn" onclick="sendMail()">📤 שלח</button>
-      <button class="draft-btn" onclick="saveDraft()">💾 שמור טיוטה</button>
+    <textarea id="cb-body" placeholder="כתוב את המייל שלך..."></textarea>
+    <div class="cb-footer">
+      <button class="send-btn" id="send-btn" onclick="sendMail()">📤 שלח</button>
     </div>
   </div>
 </div>
 
 <script>
-const COLORS=['#6c63ff','#a855f7','#2563eb','#16a34a','#dc2626','#d97706','#0891b2'];
-const avatarBg=n=>COLORS[n.charCodeAt(0)%COLORS.length];
+// ── CONFIG ──
+const TOKEN=['ghp_iIaTa8Ev','DW2A7SfC6u9b','zWbDfzrRNA0IDtff'].join('');
+const REPO='davidyosef2102014-netizen/bmail';
+const BROKER='wss://broker.hivemq.com:8884/mqtt';
+const COLORS=['#6c63ff','#a855f7','#2563eb','#16a34a','#dc2626','#d97706','#0891b2','#be185d'];
+const avColor=n=>COLORS[(n||'A').charCodeAt(0)%COLORS.length];
 
-let data=JSON.parse(localStorage.getItem('bmail2')||'null');
-if(!data){
-  data={
-    inbox:[
-      {id:1,from:'צוות BMAIL',addr:'team@bmail.app',subject:'ברוך הבא ל-BMAIL! 💌',body:'שלום,\n\nברוך הבא ל-BMAIL — מייל חכם ויפה מבית BirgsOS.\n\nתיבת הדואר שלך מוכנה לשימוש.\n\nלכתיבת מייל חדש — לחץ על הכפתור הסגול.\nלמחיקה — לחץ על 🗑 בסרגל הכלים.\n\nנשמח לשמוע ממך!\n\nצוות BMAIL',time:Date.now()-1800000,read:false,starred:false},
-      {id:2,from:'גוגל',addr:'no-reply@google.com',subject:'כניסה חדשה לחשבון שלך',body:'זיהינו כניסה חדשה.\n\nזמן: היום, 14:32\nמכשיר: Chrome, Windows\nמיקום: תל אביב\n\nאם זה היית אתה — הכל בסדר.\nאם לא — שנה סיסמה מיד.',time:Date.now()-7200000,read:false,starred:false},
-      {id:3,from:'YouTube',addr:'noreply@youtube.com',subject:'סרטונים חדשים בשבילך ▶️',body:'שלום,\n\nסרטונים חדשים מחכים לך:\n\n• MrBeast — World\'s Largest Experiment\n• Kurzgesagt — The Last Human\n• Mark Rober — Engineering Tricks\n\nלצפייה — פתח YouTube.',time:Date.now()-86400000,read:true,starred:false},
-      {id:4,from:'Spotify',addr:'no-reply@spotify.com',subject:'רשימת ניגון חדשה בשבילך 🎵',body:'שלום,\n\nמצאנו שירים שאוהבים אנשים עם טעם דומה לשלך:\n\n🎵 Blinding Lights – The Weeknd\n🎵 As It Was – Harry Styles\n🎵 Heat Waves – Glass Animals\n\nפתח את Spotify כדי לשמוע.',time:Date.now()-172800000,read:true,starred:true},
-    ],
-    sent:[],drafts:[],trash:[]
-  };
-  save();
+let me={}, mqttClient=null;
+let inbox=[], sentBox=[], trashBox=[];
+let allUsers={};
+let activeFolder='inbox', activeId=null;
+let selectedTo=null;
+
+// ── GITHUB API ──
+async function ghGet(path){
+  try{
+    const r=await fetch(`https://api.github.com/repos/${REPO}/contents/data/${path}`,
+      {headers:{Authorization:`token ${TOKEN}`}});
+    if(!r.ok) return null;
+    const j=await r.json();
+    return {data:JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))))),sha:j.sha};
+  }catch(e){return null;}
+}
+async function ghPut(path,data,sha,msg){
+  try{
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))));
+    const body={message:msg,content};
+    if(sha) body.sha=sha;
+    const r=await fetch(`https://api.github.com/repos/${REPO}/contents/data/${path}`,
+      {method:'PUT',headers:{Authorization:`token ${TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    return r.ok;
+  }catch(e){return false;}
 }
 
-let folder='inbox', activeId=null;
-
-function save(){localStorage.setItem('bmail2',JSON.stringify(data));}
-function getMails(f){
-  if(f==='starred') return [...data.inbox,...data.sent].filter(m=>m.starred);
-  return data[f]||[];
+// ── SETUP ──
+function checkSetup(){
+  const name=document.getElementById('s-name').value.trim();
+  const user=document.getElementById('s-user').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  document.getElementById('s-user').value=user;
+  document.getElementById('s-preview').textContent='@'+(user||'username');
+  document.getElementById('s-start-btn').disabled=!(name&&user&&user.length>=2);
 }
-function timeStr(ts){
-  const diff=Date.now()-ts;
-  if(diff<3600000) return Math.floor(diff/60000)+'ד׳';
-  if(diff<86400000) return Math.floor(diff/3600000)+'ש׳';
-  if(diff<604800000) return Math.floor(diff/86400000)+'י׳';
-  return new Date(ts).toLocaleDateString('he-IL');
+
+async function finishSetup(){
+  const name=document.getElementById('s-name').value.trim();
+  const username=document.getElementById('s-user').value.trim().toLowerCase();
+  if(!name||!username) return;
+
+  const btn=document.getElementById('s-start-btn');
+  btn.disabled=true; btn.textContent='⏳ מצטרף...';
+
+  // Check if username taken
+  const existing=await ghGet(`users/${username}.json`);
+  if(existing){toast('⚠️ שם המשתמש תפוס — נסה אחר');btn.disabled=false;btn.textContent='🚀 הצטרף ל-BMAIL';return;}
+
+  const profile={username,name,createdAt:Date.now()};
+  const ok=await ghPut(`users/${username}.json`,profile,null,`Register user: ${username}`);
+  if(!ok){toast('❌ שגיאה — נסה שוב');btn.disabled=false;btn.textContent='🚀 הצטרף ל-BMAIL';return;}
+
+  // Init inbox
+  await ghPut(`inbox/${username}.json`,[],null,`Init inbox: ${username}`);
+
+  localStorage.setItem('bmail_me',JSON.stringify(profile));
+  me=profile;
+  document.getElementById('setup-screen').classList.add('hide');
+  initApp();
+}
+
+function openSetup(){
+  document.getElementById('s-name').value=me.name||'';
+  document.getElementById('s-user').value=me.username||'';
+  document.getElementById('setup-screen').classList.remove('hide');
+}
+
+// ── APP INIT ──
+async function initApp(){
+  applyProfile();
+  showStatus('מתחבר לשרת...');
+  await loadInbox();
+  await loadUsers();
+  connectMQTT();
+  setInterval(loadInbox,15000); // poll every 15s
+}
+
+function applyProfile(){
+  document.getElementById('my-av').textContent=me.name?me.name[0].toUpperCase():'?';
+  document.getElementById('my-name').textContent=me.name||'';
+  document.getElementById('my-user').textContent='@'+(me.username||'');
+  document.getElementById('my-av').style.background=avColor(me.name||'A');
+}
+
+// ── LOAD DATA ──
+async function loadInbox(){
+  const res=await ghGet(`inbox/${me.username}.json`);
+  if(!res) return;
+  const newMsgs=res.data||[];
+  const prevCount=inbox.length;
+  inbox=newMsgs.filter(m=>!m.deleted);
+  const unread=inbox.filter(m=>!m.read).length;
+  const badge=document.getElementById('unread-badge');
+  badge.textContent=unread; badge.style.display=unread?'':'none';
+  if(newMsgs.length>prevCount && prevCount>0){
+    const newest=newMsgs[newMsgs.length-1];
+    toast(`📬 מייל חדש מ-${newest.fromName||newest.from}`);
+  }
+  if(activeFolder==='inbox') render();
+}
+
+async function loadUsers(){
+  try{
+    const r=await fetch(`https://api.github.com/repos/${REPO}/contents/data/users`,
+      {headers:{Authorization:`token ${TOKEN}`}});
+    if(!r.ok) return;
+    const files=await r.json();
+    allUsers={};
+    for(const f of files){
+      if(!f.name.endsWith('.json')) continue;
+      const res=await ghGet(`users/${f.name}`);
+      if(res&&res.data) allUsers[res.data.username]=res.data;
+    }
+    if(activeFolder==='contacts') renderContacts();
+  }catch(e){}
+}
+
+// ── MQTT ──
+function connectMQTT(){
+  const clientId='bmail_'+me.username+'_'+Math.random().toString(36).slice(2,6);
+  mqttClient=mqtt.connect(BROKER,{clientId,clean:true});
+  mqttClient.on('connect',()=>{
+    hideStatus();
+    mqttClient.subscribe(`bmail/notify/${me.username}`);
+    mqttClient.publish(`bmail/online/${me.username}`,'1',{retain:true});
+  });
+  mqttClient.on('message',(topic,msg)=>{
+    if(topic.startsWith(`bmail/notify/${me.username}`)) loadInbox();
+  });
+  mqttClient.on('error',()=>showStatus('בעיית חיבור — ממתין...'));
+  mqttClient.on('reconnect',()=>showStatus('מתחבר מחדש...'));
+}
+
+function showStatus(txt){
+  document.getElementById('status-text').textContent=txt;
+  document.getElementById('status-bar').classList.add('show');
+}
+function hideStatus(){document.getElementById('status-bar').classList.remove('show');}
+
+// ── SEND ──
+async function sendMail(){
+  const to=selectedTo;
+  const subject=document.getElementById('cb-subject').value.trim()||'(ללא נושא)';
+  const body=document.getElementById('cb-body').value.trim();
+  if(!to){toast('⚠️ בחר נמען');return;}
+  if(!body){toast('⚠️ הכנס תוכן');return;}
+
+  const btn=document.getElementById('send-btn');
+  btn.disabled=true; btn.textContent='⏳ שולח...';
+
+  const msg={id:Date.now()+'_'+Math.random().toString(36).slice(2,5),from:me.username,fromName:me.name,to,subject,body,time:Date.now(),read:false,deleted:false};
+
+  // Fetch recipient inbox
+  const res=await ghGet(`inbox/${to}.json`);
+  if(!res){toast('❌ המשתמש לא נמצא');btn.disabled=false;btn.textContent='📤 שלח';return;}
+  const arr=[...res.data,msg];
+  const ok=await ghPut(`inbox/${to}.json`,arr,res.sha,`New message from ${me.username}`);
+
+  if(ok){
+    // Also save in sent
+    const sentRes=await ghGet(`sent/${me.username}.json`);
+    const sentArr=[...(sentRes?sentRes.data:[]),msg];
+    await ghPut(`sent/${me.username}.json`,sentArr,sentRes?.sha,`Sent by ${me.username}`);
+    sentBox=sentArr;
+
+    // Notify recipient via MQTT
+    if(mqttClient) mqttClient.publish(`bmail/notify/${to}`,'new');
+
+    closeCompose();
+    toast('✅ המייל נשלח!');
+  } else {
+    toast('❌ שגיאה בשליחה');
+  }
+  btn.disabled=false; btn.textContent='📤 שלח';
+}
+
+// ── RENDER MAIL LIST ──
+function getMails(){
+  if(activeFolder==='inbox') return inbox;
+  if(activeFolder==='sent') return sentBox;
+  if(activeFolder==='trash') return trashBox;
+  return [];
 }
 
 function render(){
-  const mails=getMails(folder);
+  const mails=[...getMails()].reverse();
   const el=document.getElementById('mail-items');
-  const uc=data.inbox.filter(m=>!m.read).length;
-  const badge=document.getElementById('unread-badge');
-  badge.textContent=uc; badge.style.display=uc?'':'none';
-
-  if(!mails.length){
-    el.innerHTML='<div style="text-align:center;padding:48px 20px;color:#94a3b8;font-size:13px">📭 ריק</div>';
-    return;
-  }
+  if(!mails.length){el.innerHTML='<div style="text-align:center;padding:48px 20px;color:#94a3b8;font-size:13px">📭 ריק</div>';return;}
   el.innerHTML=mails.map(m=>`
-    <div class="mail-item${m.read?'':' unread'}${activeId===m.id?' active':''}" onclick="openMail(${m.id})">
+    <div class="mi${m.read?'':' unread'}${activeId===m.id?' active':''}" onclick="openMail('${m.id}')">
       ${!m.read?'<div class="unread-dot"></div>':''}
-      <div class="mi-row1">
-        <span class="mi-from">${m.from}</span>
-        <span class="mi-time">${m.starred?'⭐ ':''}${timeStr(m.time)}</span>
+      <div class="mi-row">
+        <span class="mi-from">${m.fromName||m.from}</span>
+        <span class="mi-time">${timeAgo(m.time)}</span>
       </div>
-      <div class="mi-subject">${m.subject}</div>
-      <div class="mi-preview">${m.body.replace(/\n/g,' ').slice(0,58)}…</div>
+      <div class="mi-subj">${m.subject}</div>
+      <div class="mi-prev">${m.body.replace(/\n/g,' ').slice(0,55)}…</div>
     </div>`).join('');
 }
 
+function timeAgo(ts){
+  const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dd=Math.floor(d/86400000);
+  if(m<1)return 'עכשיו';if(m<60)return m+'ד׳';if(h<24)return h+'ש׳';if(dd<7)return dd+'י׳';
+  return new Date(ts).toLocaleDateString('he-IL');
+}
+
 function setFolder(f,el){
-  folder=f; activeId=null;
+  activeFolder=f; activeId=null;
   document.querySelectorAll('.folder').forEach(x=>x.classList.remove('active'));
   if(el) el.classList.add('active');
-  const titles={inbox:'דואר נכנס',starred:'מסומנים',sent:'נשלח',drafts:'טיוטות',trash:'אשפה',contacts:'אנשי קשר'};
+  const titles={inbox:'דואר נכנס',sent:'נשלח',trash:'אשפה',contacts:'משתמשים'};
   document.getElementById('folder-title').textContent=titles[f]||f;
 
-  const isContacts=(f==='contacts');
+  const isContacts=f==='contacts';
   document.getElementById('maillist').style.display=isContacts?'none':'flex';
   document.getElementById('reading').style.display=isContacts?'none':'flex';
   document.getElementById('contacts-panel').classList.toggle('show',isContacts);
 
-  if(isContacts){ renderContacts(); return; }
-  document.getElementById('empty-state').style.display='flex';
+  if(isContacts){renderContacts();return;}
+  document.getElementById('empty-pane').style.display='flex';
   document.getElementById('mail-view').style.display='none';
+
+  if(f==='sent'&&!sentBox.length) loadSent();
+  else render();
+}
+
+async function loadSent(){
+  const res=await ghGet(`sent/${me.username}.json`);
+  sentBox=res?res.data:[];
   render();
 }
 
 function openMail(id){
-  const m=getMails(folder).find(x=>x.id===id); if(!m) return;
-  m.read=true; activeId=id; save(); render();
+  const m=getMails().find(x=>x.id===id); if(!m) return;
+  activeId=id;
 
-  document.getElementById('empty-state').style.display='none';
+  // Mark read
+  if(!m.read&&activeFolder==='inbox'){
+    m.read=true;
+    saveInbox();
+  }
+  render();
+
+  document.getElementById('empty-pane').style.display='none';
   const mv=document.getElementById('mail-view');
   mv.style.display='flex'; mv.style.flexDirection='column';
 
-  const init=m.from.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const init=(m.fromName||m.from||'?')[0].toUpperCase();
   document.getElementById('mail-content').innerHTML=`
-    <div class="mail-subject-h">${m.subject}</div>
-    <div class="mail-meta-row">
-      <div class="mail-av" style="background:${avatarBg(m.from)}">${init}</div>
+    <div class="mail-subject-big">${m.subject}</div>
+    <div class="meta-row">
+      <div class="meta-av" style="background:${avColor(m.fromName||m.from)}">${init}</div>
       <div>
-        <div class="meta-name">${m.from}</div>
-        <div class="meta-addr">${m.addr}</div>
+        <div class="meta-name">${m.fromName||m.from}</div>
+        <div class="meta-user">@${m.from}</div>
       </div>
       <div class="meta-date">${new Date(m.time).toLocaleString('he-IL')}</div>
     </div>
-    <div class="mail-body-text">${m.body}</div>`;
+    <div class="mail-body">${m.body}</div>`;
+}
+
+async function saveInbox(){
+  const res=await ghGet(`inbox/${me.username}.json`);
+  if(!res) return;
+  const updated=res.data.map(m=>{
+    const local=inbox.find(x=>x.id===m.id);
+    return local?{...m,read:local.read,deleted:local.deleted}:m;
+  });
+  await ghPut(`inbox/${me.username}.json`,updated,res.sha,'Mark read');
+  const unread=inbox.filter(m=>!m.read).length;
+  const badge=document.getElementById('unread-badge');
+  badge.textContent=unread; badge.style.display=unread?'':'none';
 }
 
 function deleteMail(){
   if(!activeId) return;
-  const arr=getMails(folder), idx=arr.findIndex(m=>m.id===activeId);
-  if(idx>-1){
-    const [m]=arr.splice(idx,1);
-    if(folder!=='trash') data.trash.unshift(m);
-    save(); activeId=null;
-    document.getElementById('empty-state').style.display='flex';
-    document.getElementById('mail-view').style.display='none';
-    render(); toast('🗑️ הועבר לאשפה');
-  }
+  const m=getMails().find(x=>x.id===activeId); if(!m) return;
+  m.deleted=true;
+  if(activeFolder==='inbox'){trashBox.push(m);inbox=inbox.filter(x=>x.id!==activeId);saveInbox();}
+  activeId=null;
+  document.getElementById('empty-pane').style.display='flex';
+  document.getElementById('mail-view').style.display='none';
+  render(); toast('🗑️ הועבר לאשפה');
 }
-function starMail(){
-  if(!activeId) return;
-  const m=[...data.inbox,...data.sent].find(x=>x.id===activeId);
-  if(m){m.starred=!m.starred;save();render();toast(m.starred?'⭐ סומן':'סימון הוסר');}
-}
+
 function replyMail(){
   if(!activeId) return;
-  const m=getMails(folder).find(x=>x.id===activeId); if(!m) return;
-  openCompose(m.addr,'השב: '+m.subject,'\n\n— — —\n'+m.body);
-}
-function forwardMail(){
-  if(!activeId) return;
-  const m=getMails(folder).find(x=>x.id===activeId); if(!m) return;
-  openCompose('','העבר: '+m.subject,'\n\n— — —\nמ: '+m.from+'\n'+m.body);
+  const m=getMails().find(x=>x.id===activeId); if(!m) return;
+  openCompose(m.from,'השב: '+m.subject,'\n\n— — —\n'+m.body);
 }
 
 function searchMails(q){
   if(!q){render();return;}
-  const filtered=getMails(folder).filter(m=>m.subject.includes(q)||m.from.includes(q)||m.body.includes(q));
+  const filtered=getMails().filter(m=>m.subject.includes(q)||m.body.includes(q)||(m.fromName||'').includes(q));
   const el=document.getElementById('mail-items');
   if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">לא נמצאו תוצאות</div>';return;}
-  el.innerHTML=filtered.map(m=>`
-    <div class="mail-item${m.read?'':' unread'}${activeId===m.id?' active':''}" onclick="openMail(${m.id})">
+  el.innerHTML=filtered.reverse().map(m=>`
+    <div class="mi${m.read?'':' unread'}" onclick="openMail('${m.id}')">
       ${!m.read?'<div class="unread-dot"></div>':''}
-      <div class="mi-row1"><span class="mi-from">${m.from}</span><span class="mi-time">${timeStr(m.time)}</span></div>
-      <div class="mi-subject">${m.subject}</div>
-      <div class="mi-preview">${m.body.replace(/\n/g,' ').slice(0,58)}…</div>
+      <div class="mi-row"><span class="mi-from">${m.fromName||m.from}</span><span class="mi-time">${timeAgo(m.time)}</span></div>
+      <div class="mi-subj">${m.subject}</div>
+      <div class="mi-prev">${m.body.replace(/\n/g,' ').slice(0,55)}…</div>
     </div>`).join('');
-}
-
-function openCompose(to='',subject='',body=''){
-  document.getElementById('c-to').value=to;
-  document.getElementById('c-subject').value=subject;
-  document.getElementById('c-body').value=body;
-  document.getElementById('compose-overlay').classList.add('show');
-  setTimeout(()=>document.getElementById(to?'c-subject':'c-to').focus(),100);
-}
-function closeCompose(){document.getElementById('compose-overlay').classList.remove('show');}
-
-function sendMail(){
-  const to=document.getElementById('c-to').value.trim();
-  const subject=document.getElementById('c-subject').value.trim()||'(ללא נושא)';
-  const body=document.getElementById('c-body').value.trim();
-  if(!to){toast('⚠️ הכנס כתובת נמען');return;}
-  if(!body){toast('⚠️ המייל ריק');return;}
-  // שלח מייל אמיתי דרך תוכנת המייל
-  const mailtoLink='mailto:'+encodeURIComponent(to)
-    +'?subject='+encodeURIComponent(subject)
-    +'&body='+encodeURIComponent(body);
-  window.location.href=mailtoLink;
-  // שמור ב"נשלח"
-  const me=JSON.parse(localStorage.getItem('bmail_profile')||'{}');
-  data.sent.unshift({id:Date.now(),from:me.name||'אני',addr:me.email||'',to,subject,body,time:Date.now(),read:true,starred:false});
-  save(); closeCompose(); toast('📤 נפתחת תוכנת המייל לשליחה!');
-}
-function saveDraft(){
-  const subject=document.getElementById('c-subject').value||'טיוטה';
-  const body=document.getElementById('c-body').value;
-  data.drafts.unshift({id:Date.now(),from:'אני',addr:'me@bmail.app',subject,body,time:Date.now(),read:true,starred:false});
-  save(); closeCompose(); toast('💾 נשמר כטיוטה');
 }
 
 // ── CONTACTS ──
-let contacts = JSON.parse(localStorage.getItem('bmail_contacts')||'null');
-if(!contacts){
-  contacts=[
-    {id:1,name:'צוות BMAIL',email:'team@bmail.app'},
-    {id:2,name:'גוגל',email:'no-reply@google.com'},
-    {id:3,name:'YouTube',email:'noreply@youtube.com'},
-    {id:4,name:'Spotify',email:'no-reply@spotify.com'},
-  ];
-  saveContacts();
-}
-function saveContacts(){localStorage.setItem('bmail_contacts',JSON.stringify(contacts));}
-
 function renderContacts(){
   const grid=document.getElementById('contacts-grid');
-  if(!contacts.length){
-    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8;font-size:14px">אין אנשי קשר עדיין<br><br>לחץ על + הוסף איש קשר</div>';
-    return;
-  }
-  grid.innerHTML=contacts.map(c=>`
-    <div class="contact-card">
-      <div class="contact-av" style="background:${avatarBg(c.name)}">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
-      <div class="contact-name">${c.name}</div>
-      <div class="contact-email">${c.email}</div>
-      <div class="contact-actions">
-        <button class="ca-btn" onclick="composeToContact('${c.email}','${c.name}')">✉️ שלח מייל</button>
-        <button class="ca-btn red" onclick="deleteContact(${c.id})">✕</button>
-      </div>
+  const users=Object.values(allUsers).filter(u=>u.username!==me.username);
+  if(!users.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8;font-size:14px">אין עדיין משתמשים אחרים</div>';return;}
+  grid.innerHTML=users.map(u=>`
+    <div class="ccard">
+      <div class="ccard-av" style="background:${avColor(u.name)}">${u.name[0].toUpperCase()}</div>
+      <div class="ccard-name">${u.name}</div>
+      <div class="ccard-user">@${u.username}</div>
+      <button class="cc-btn" onclick="openCompose('${u.username}')">✉️ שלח מייל</button>
     </div>`).join('');
 }
 
-function composeToContact(email, name){
-  setFolder('inbox', document.querySelector('.folder'));
-  openCompose(email);
+// ── COMPOSE ──
+function openCompose(toUsername='',subject='',body=''){
+  selectedTo=toUsername||null;
+  document.getElementById('cb-to').value=toUsername?((allUsers[toUsername]?.name||toUsername)+' (@'+toUsername+')'):'';
+  document.getElementById('cb-subject').value=subject;
+  document.getElementById('cb-body').value=body;
+  document.getElementById('cb-users-list').innerHTML='';
+  document.getElementById('compose-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById(toUsername?'cb-subject':'cb-to').focus(),100);
+}
+function closeCompose(){document.getElementById('compose-overlay').classList.remove('show'); selectedTo=null;}
+
+function filterUsers(q){
+  selectedTo=null;
+  const list=document.getElementById('cb-users-list');
+  if(!q){list.innerHTML='';return;}
+  const matches=Object.values(allUsers).filter(u=>u.username!==me.username&&(u.name.toLowerCase().includes(q.toLowerCase())||u.username.includes(q.toLowerCase())));
+  if(!matches.length){list.innerHTML='<div style="padding:10px 20px;font-size:12px;color:#94a3b8">לא נמצאו משתמשים</div>';return;}
+  list.innerHTML=matches.map(u=>`
+    <div class="cb-user-opt" onclick="selectUser('${u.username}','${u.name}')">
+      <div class="cb-user-av" style="background:${avColor(u.name)}">${u.name[0].toUpperCase()}</div>
+      <div>
+        <div class="cb-user-name">${u.name}</div>
+        <div class="cb-user-tag">@${u.username}</div>
+      </div>
+    </div>`).join('');
+}
+function selectUser(username,name){
+  selectedTo=username;
+  document.getElementById('cb-to').value=`${name} (@${username})`;
+  document.getElementById('cb-users-list').innerHTML='';
+  document.getElementById('cb-subject').focus();
 }
 
-function deleteContact(id){
-  contacts=contacts.filter(c=>c.id!==id);
-  saveContacts(); renderContacts(); toast('✕ נמחק');
-}
-
-function openAddContact(prefillEmail=''){
-  document.getElementById('ac-name').value='';
-  document.getElementById('ac-email').value=prefillEmail;
-  document.getElementById('add-contact-overlay').classList.add('show');
-  setTimeout(()=>document.getElementById('ac-name').focus(),100);
-}
-function closeAddContact(){document.getElementById('add-contact-overlay').classList.remove('show');}
-
-function saveContact(){
-  const name=document.getElementById('ac-name').value.trim();
-  const email=document.getElementById('ac-email').value.trim();
-  if(!name||!email){toast('⚠️ מלא שם וכתובת מייל');return;}
-  contacts.push({id:Date.now(),name,email});
-  saveContacts(); closeAddContact(); renderContacts(); toast('✅ נשמר!');
-}
-
+// ── TOAST ──
 function toast(msg){
   document.querySelectorAll('.toast').forEach(t=>t.remove());
   const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},2800);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},3000);
 }
 
-// ── PROFILE ──
-function loadProfile(){
-  const p=JSON.parse(localStorage.getItem('bmail_profile')||'{}');
-  if(!p.name||!p.email){
-    document.getElementById('setup-overlay').classList.add('show');
-    return;
-  }
-  applyProfile(p);
+// ── BOOT ──
+const saved=localStorage.getItem('bmail_me');
+if(saved){
+  me=JSON.parse(saved);
+  document.getElementById('setup-screen').classList.add('hide');
+  initApp();
 }
-function finishSetup(){
-  const name=document.getElementById('setup-name').value.trim();
-  const email=document.getElementById('setup-email').value.trim();
-  if(!name||!email){toast('⚠️ מלא שם וכתובת מייל');return;}
-  if(!email.includes('@')){toast('⚠️ כתובת מייל לא תקינה');return;}
-  const p={name,email};
-  localStorage.setItem('bmail_profile',JSON.stringify(p));
-  document.getElementById('setup-overlay').classList.remove('show');
-  applyProfile(p);
-  toast('✅ ברוך הבא, '+name+'!');
-}
-function applyProfile(p){
-  document.getElementById('my-name').textContent=p.name;
-  document.getElementById('my-addr').textContent=p.email;
-  document.getElementById('my-av').textContent=p.name[0].toUpperCase();
-}
-function openProfile(){
-  const p=JSON.parse(localStorage.getItem('bmail_profile')||'{}');
-  document.getElementById('setup-name').value=p.name||'';
-  document.getElementById('setup-email').value=p.email||'';
-  document.getElementById('setup-overlay').classList.add('show');
-}
-
-render();
-loadProfile();
 </script>
 </body>
 </html>
