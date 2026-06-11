@@ -148,6 +148,38 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 .draft-btn{background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;padding:10px 16px;border-radius:12px;font-size:13px;cursor:pointer;font-weight:600;transition:all .2s;}
 .draft-btn:hover{border-color:#6c63ff;color:#6c63ff;}
 
+/* CONTACTS */
+#contacts-panel{display:none;flex-direction:column;flex:1;overflow:hidden;background:#f8faff;}
+#contacts-panel.show{display:flex;}
+.contacts-top{display:flex;align-items:center;justify-content:space-between;padding:18px 24px 12px;border-bottom:1px solid #e8eaf0;background:#fff;}
+.contacts-top h2{font-size:17px;font-weight:800;color:#1e293b;}
+.add-contact-btn{background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:10px;color:#fff;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
+.contacts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding:20px;overflow-y:auto;}
+.contact-card{background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);cursor:pointer;transition:all .2s;border:1.5px solid transparent;}
+.contact-card:hover{border-color:#6c63ff;transform:translateY(-2px);box-shadow:0 6px 20px rgba(108,99,255,.15);}
+.contact-av{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;margin:0 auto 12px;}
+.contact-name{font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;}
+.contact-email{font-size:12px;color:#6c63ff;word-break:break-all;}
+.contact-actions{display:flex;gap:6px;justify-content:center;margin-top:12px;}
+.ca-btn{background:#f0f2ff;border:none;border-radius:8px;color:#6c63ff;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;transition:background .2s;}
+.ca-btn:hover{background:#e0e4ff;}
+.ca-btn.red{background:#fef2f2;color:#ef4444;}
+.ca-btn.red:hover{background:#fee2e2;}
+
+/* ADD CONTACT MODAL */
+#add-contact-overlay{display:none;position:fixed;inset:0;z-index:3000;background:rgba(15,10,40,.45);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
+#add-contact-overlay.show{display:flex;}
+#add-contact-box{background:#fff;border-radius:22px;width:400px;max-width:95vw;box-shadow:0 40px 100px rgba(0,0,0,.2);overflow:hidden;animation:popIn .25s cubic-bezier(.34,1.56,.64,1);}
+.ac-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1.5px solid #f1f5f9;}
+.ac-header h3{font-size:16px;font-weight:800;color:#1e293b;}
+.ac-body{padding:20px 22px;display:flex;flex-direction:column;gap:12px;}
+.ac-input{width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 14px;font-size:14px;color:#1e293b;outline:none;direction:rtl;transition:border .2s;}
+.ac-input:focus{border-color:#6c63ff;}
+.ac-input::placeholder{color:#c4ccd8;}
+.ac-footer{padding:14px 22px;border-top:1.5px solid #f1f5f9;display:flex;gap:8px;}
+.ac-save{flex:1;background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:12px;color:#fff;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}
+.ac-cancel{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;color:#64748b;padding:12px 18px;font-size:13px;cursor:pointer;font-weight:600;}
+
 /* TOAST */
 .toast{
   position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
@@ -184,6 +216,12 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
   </div>
   <div class="folder" onclick="setFolder('trash',this)">
     <span class="f-icon">🗑️</span> אשפה
+  </div>
+
+  <div class="sidebar-sep"></div>
+
+  <div class="folder" onclick="setFolder('contacts',this)">
+    <span class="f-icon">👤</span> אנשי קשר
   </div>
 
   <div class="sidebar-sep"></div>
@@ -225,6 +263,33 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
       <button class="tb-btn red" onclick="deleteMail()">🗑 מחק</button>
     </div>
     <div class="mail-reading" id="mail-content"></div>
+  </div>
+</div>
+
+<!-- CONTACTS PANEL -->
+<div id="contacts-panel">
+  <div class="contacts-top">
+    <h2>👤 אנשי קשר</h2>
+    <button class="add-contact-btn" onclick="openAddContact()">+ הוסף איש קשר</button>
+  </div>
+  <div class="contacts-grid" id="contacts-grid"></div>
+</div>
+
+<!-- ADD CONTACT MODAL -->
+<div id="add-contact-overlay" onclick="if(event.target===this)closeAddContact()">
+  <div id="add-contact-box">
+    <div class="ac-header">
+      <h3>👤 איש קשר חדש</h3>
+      <button class="c-close" onclick="closeAddContact()">✕</button>
+    </div>
+    <div class="ac-body">
+      <input class="ac-input" id="ac-name" placeholder="שם מלא..." type="text">
+      <input class="ac-input" id="ac-email" placeholder="כתובת מייל..." type="email">
+    </div>
+    <div class="ac-footer">
+      <button class="ac-cancel" onclick="closeAddContact()">ביטול</button>
+      <button class="ac-save" onclick="saveContact()">💾 שמור</button>
+    </div>
   </div>
 </div>
 
@@ -310,9 +375,16 @@ function render(){
 function setFolder(f,el){
   folder=f; activeId=null;
   document.querySelectorAll('.folder').forEach(x=>x.classList.remove('active'));
-  el.classList.add('active');
-  const titles={inbox:'דואר נכנס',starred:'מסומנים',sent:'נשלח',drafts:'טיוטות',trash:'אשפה'};
-  document.getElementById('folder-title').textContent=titles[f];
+  if(el) el.classList.add('active');
+  const titles={inbox:'דואר נכנס',starred:'מסומנים',sent:'נשלח',drafts:'טיוטות',trash:'אשפה',contacts:'אנשי קשר'};
+  document.getElementById('folder-title').textContent=titles[f]||f;
+
+  const isContacts=(f==='contacts');
+  document.getElementById('maillist').style.display=isContacts?'none':'flex';
+  document.getElementById('reading').style.display=isContacts?'none':'flex';
+  document.getElementById('contacts-panel').classList.toggle('show',isContacts);
+
+  if(isContacts){ renderContacts(); return; }
   document.getElementById('empty-state').style.display='flex';
   document.getElementById('mail-view').style.display='none';
   render();
@@ -405,6 +477,63 @@ function saveDraft(){
   const body=document.getElementById('c-body').value;
   data.drafts.unshift({id:Date.now(),from:'אני',addr:'me@bmail.app',subject,body,time:Date.now(),read:true,starred:false});
   save(); closeCompose(); toast('💾 נשמר כטיוטה');
+}
+
+// ── CONTACTS ──
+let contacts = JSON.parse(localStorage.getItem('bmail_contacts')||'null');
+if(!contacts){
+  contacts=[
+    {id:1,name:'צוות BMAIL',email:'team@bmail.app'},
+    {id:2,name:'גוגל',email:'no-reply@google.com'},
+    {id:3,name:'YouTube',email:'noreply@youtube.com'},
+    {id:4,name:'Spotify',email:'no-reply@spotify.com'},
+  ];
+  saveContacts();
+}
+function saveContacts(){localStorage.setItem('bmail_contacts',JSON.stringify(contacts));}
+
+function renderContacts(){
+  const grid=document.getElementById('contacts-grid');
+  if(!contacts.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8;font-size:14px">אין אנשי קשר עדיין<br><br>לחץ על + הוסף איש קשר</div>';
+    return;
+  }
+  grid.innerHTML=contacts.map(c=>`
+    <div class="contact-card">
+      <div class="contact-av" style="background:${avatarBg(c.name)}">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div class="contact-name">${c.name}</div>
+      <div class="contact-email">${c.email}</div>
+      <div class="contact-actions">
+        <button class="ca-btn" onclick="composeToContact('${c.email}','${c.name}')">✉️ שלח מייל</button>
+        <button class="ca-btn red" onclick="deleteContact(${c.id})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function composeToContact(email, name){
+  setFolder('inbox', document.querySelector('.folder'));
+  openCompose(email);
+}
+
+function deleteContact(id){
+  contacts=contacts.filter(c=>c.id!==id);
+  saveContacts(); renderContacts(); toast('✕ נמחק');
+}
+
+function openAddContact(prefillEmail=''){
+  document.getElementById('ac-name').value='';
+  document.getElementById('ac-email').value=prefillEmail;
+  document.getElementById('add-contact-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('ac-name').focus(),100);
+}
+function closeAddContact(){document.getElementById('add-contact-overlay').classList.remove('show');}
+
+function saveContact(){
+  const name=document.getElementById('ac-name').value.trim();
+  const email=document.getElementById('ac-email').value.trim();
+  if(!name||!email){toast('⚠️ מלא שם וכתובת מייל');return;}
+  contacts.push({id:Date.now(),name,email});
+  saveContacts(); closeAddContact(); renderContacts(); toast('✅ נשמר!');
 }
 
 function toast(msg){
