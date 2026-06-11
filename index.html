@@ -144,8 +144,91 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 .tab.active{color:#6c63ff;border-bottom-color:#6c63ff;}
 
 /* TOAST */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 22px;border-radius:12px;font-size:13px;font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,.22);z-index:9999;animation:toastIn .3s ease;white-space:nowrap;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 22px;border-radius:12px;font-size:13px;font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,.22);z-index:9999;animation:toastIn .3s ease;white-space:nowrap;}
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ── MOBILE ── */
+@media(max-width:700px){
+  body{flex-direction:column;height:100dvh;overflow:hidden;}
+
+  /* hide desktop sidebar */
+  #sidebar{display:none!important;}
+
+  /* top header */
+  #mobile-header{display:flex!important;}
+
+  /* mail list full width */
+  #maillist{width:100%;border:none;flex:1;overflow:hidden;display:flex;flex-direction:column;}
+  .list-header{display:none;}
+
+  /* panels */
+  #reading{position:fixed;inset:0;bottom:60px;top:56px;z-index:100;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);background:#fff;}
+  #reading.slide-in{transform:translateX(0);}
+
+  #contacts-panel{position:fixed;inset:0;bottom:60px;top:56px;z-index:100;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);}
+  #contacts-panel.show{transform:translateX(0);}
+
+  /* mail read padding */
+  .mail-read-scroll{padding:16px 16px 24px;}
+  .mail-subject-big{font-size:18px;}
+  .meta-row{flex-wrap:wrap;gap:8px;}
+  .meta-date{margin-right:0;width:100%;}
+
+  /* compose full height */
+  #compose-overlay{align-items:flex-end;padding:0;}
+  #compose-box{border-radius:22px 22px 0 0;width:100%;max-width:100%;max-height:92dvh;}
+  #cb-body{min-height:120px;}
+
+  /* bottom nav */
+  #bottom-nav{display:flex!important;}
+
+  /* status bar */
+  #status-bar{border-radius:0 0 10px 10px;}
+
+  /* search */
+  .search-row{margin:6px 10px 4px;}
+
+  /* contacts grid single col */
+  .contacts-grid{grid-template-columns:1fr 1fr;padding:12px;gap:10px;}
+  .ccard{padding:14px 10px;}
+
+  /* setup card */
+  .setup-card{border-radius:20px 20px 0 0;width:100%;max-width:100%;position:fixed;bottom:0;}
+  #setup-screen{align-items:flex-end;}
+  .setup-top{padding:24px 24px 16px;}
+  .setup-top .logo-big{font-size:38px;}
+
+  /* toast above bottom nav */
+  .toast{bottom:72px;}
+}
+
+/* Mobile header */
+#mobile-header{
+  display:none;height:56px;background:#fff;border-bottom:1px solid #e8eaf0;
+  align-items:center;padding:0 16px;gap:10px;flex-shrink:0;z-index:50;
+}
+.mh-logo{font-size:18px;font-weight:900;color:#1a1a2e;flex:1;}
+.mh-logo span{color:#6c63ff;}
+.mh-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;cursor:pointer;}
+.mh-compose{background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:10px;color:#fff;width:36px;height:36px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mh-back{background:none;border:none;font-size:22px;color:#6c63ff;cursor:pointer;padding:0;line-height:1;display:none;}
+#mobile-header.show-back .mh-back{display:flex;}
+#mobile-header.show-back .mh-logo{display:none;}
+#mobile-header.show-back .mh-av{display:none;}
+#mobile-header.show-back .mh-compose{display:none;}
+.mh-back-title{font-size:15px;font-weight:700;color:#1e293b;flex:1;}
+
+/* Bottom nav */
+#bottom-nav{
+  display:none;height:60px;background:#fff;border-top:1px solid #e8eaf0;
+  align-items:center;justify-content:space-around;flex-shrink:0;
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+}
+.bn-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:#94a3b8;padding:6px 14px;border-radius:10px;transition:color .2s;position:relative;}
+.bn-item.active{color:#6c63ff;}
+.bn-item .bn-icon{font-size:22px;}
+.bn-item .bn-label{font-size:10px;font-weight:600;}
+.bn-badge{position:absolute;top:2px;right:6px;background:#6c63ff;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;display:none;}
 </style>
 </head>
 <body>
@@ -191,6 +274,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
       <button class="s-btn" id="s-start-btn" onclick="finishSetup()" disabled>🚀 הצטרף ל-BMAIL</button>
     </div>
   </div>
+</div>
+
+<!-- MOBILE HEADER -->
+<div id="mobile-header">
+  <button class="mh-back" onclick="mobileBack()">‹</button>
+  <span class="mh-back-title" id="mh-back-title"></span>
+  <span class="mh-logo">B<span>MAIL</span></span>
+  <button class="mh-compose" onclick="openCompose()">✏️</button>
+  <div class="mh-av" id="mh-av" onclick="openSetup()">?</div>
 </div>
 
 <!-- STATUS BAR -->
@@ -245,6 +337,23 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 <div id="contacts-panel">
   <div class="cp-top"><h2>👥 כל משתמשי BMAIL</h2></div>
   <div class="contacts-grid" id="contacts-grid"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="bottom-nav">
+  <div class="bn-item active" id="bn-inbox" onclick="setFolder('inbox',null);mobileShowList()">
+    <span class="bn-icon">📥</span>
+    <span class="bn-label">דואר נכנס</span>
+    <span class="bn-badge" id="bn-badge">0</span>
+  </div>
+  <div class="bn-item" id="bn-sent" onclick="setFolder('sent',null);mobileShowList()">
+    <span class="bn-icon">📤</span>
+    <span class="bn-label">נשלח</span>
+  </div>
+  <div class="bn-item" id="bn-contacts" onclick="setFolder('contacts',null)">
+    <span class="bn-icon">👥</span>
+    <span class="bn-label">משתמשים</span>
+  </div>
 </div>
 
 <!-- COMPOSE -->
@@ -391,10 +500,14 @@ async function initApp(){
 }
 
 function applyProfile(){
-  document.getElementById('my-av').textContent=me.name?me.name[0].toUpperCase():'?';
+  const init=me.name?me.name[0].toUpperCase():'?';
+  const col=avColor(me.name||'A');
+  document.getElementById('my-av').textContent=init;
+  document.getElementById('my-av').style.background=col;
   document.getElementById('my-name').textContent=me.name||'';
   document.getElementById('my-user').textContent='@'+(me.username||'');
-  document.getElementById('my-av').style.background=avColor(me.name||'A');
+  const mhAv=document.getElementById('mh-av');
+  if(mhAv){mhAv.textContent=init;mhAv.style.background=col;}
 }
 
 // ── LOAD DATA ──
@@ -407,6 +520,8 @@ async function loadInbox(){
   const unread=inbox.filter(m=>!m.read).length;
   const badge=document.getElementById('unread-badge');
   badge.textContent=unread; badge.style.display=unread?'':'none';
+  const bnBadge=document.getElementById('bn-badge');
+  if(bnBadge){bnBadge.textContent=unread;bnBadge.style.display=unread?'':'none';}
   if(newMsgs.length>prevCount && prevCount>0){
     const newest=newMsgs[newMsgs.length-1];
     toast(`📬 מייל חדש מ-${newest.fromName||newest.from}`);
@@ -531,7 +646,7 @@ function setFolder(f,el){
   document.getElementById('reading').style.display=isContacts?'none':'flex';
   document.getElementById('contacts-panel').classList.toggle('show',isContacts);
 
-  if(isContacts){renderContacts();return;}
+  if(isContacts){renderContacts();mobileOpenContacts();return;}
   document.getElementById('empty-pane').style.display='flex';
   document.getElementById('mail-view').style.display='none';
 
@@ -559,6 +674,7 @@ function openMail(id){
   document.getElementById('empty-pane').style.display='none';
   const mv=document.getElementById('mail-view');
   mv.style.display='flex'; mv.style.flexDirection='column';
+  mobileOpenMail();
 
   const init=(m.fromName||m.from||'?')[0].toUpperCase();
   document.getElementById('mail-content').innerHTML=`
@@ -664,6 +780,44 @@ function selectUser(username,name){
   document.getElementById('cb-to').value=`${name} (@${username})`;
   document.getElementById('cb-users-list').innerHTML='';
   document.getElementById('cb-subject').focus();
+}
+
+// ── MOBILE ──
+const isMobile=()=>window.innerWidth<=700;
+
+function mobileShowList(){
+  if(!isMobile()) return;
+  document.getElementById('reading').classList.remove('slide-in');
+  document.getElementById('contacts-panel').classList.remove('show');
+  document.getElementById('mobile-header').classList.remove('show-back');
+  // update bottom nav active
+  ['bn-inbox','bn-sent','bn-contacts'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  const map={inbox:'bn-inbox',sent:'bn-sent',trash:'bn-inbox',contacts:'bn-contacts'};
+  document.getElementById(map[activeFolder]||'bn-inbox')?.classList.add('active');
+}
+
+function mobileBack(){
+  document.getElementById('reading').classList.remove('slide-in');
+  document.getElementById('contacts-panel').classList.remove('show');
+  document.getElementById('mobile-header').classList.remove('show-back');
+  activeId=null;
+}
+
+function mobileOpenMail(){
+  if(!isMobile()) return;
+  document.getElementById('reading').classList.add('slide-in');
+  const hdr=document.getElementById('mobile-header');
+  hdr.classList.add('show-back');
+  const m=getMails().find(x=>x.id===activeId);
+  document.getElementById('mh-back-title').textContent=m?.subject||'';
+}
+
+function mobileOpenContacts(){
+  if(!isMobile()) return;
+  document.getElementById('contacts-panel').classList.add('show');
+  const hdr=document.getElementById('mobile-header');
+  hdr.classList.add('show-back');
+  document.getElementById('mh-back-title').textContent='כל המשתמשים';
 }
 
 // ── TOAST ──
