@@ -131,6 +131,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 .send-btn{background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:11px;color:#fff;padding:10px 26px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 3px 12px rgba(108,99,255,.3);transition:all .2s;}
 .send-btn:hover{transform:translateY(-1px);}
 .send-btn:disabled{opacity:.5;pointer-events:none;}
+.img-attach-btn{background:#f0f2ff;border:1px solid #e0e4ff;border-radius:10px;color:#6c63ff;width:40px;height:40px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0;}
+.img-attach-btn:hover{background:#e0e4ff;}
+.img-thumb-wrap{position:relative;display:inline-block;}
+.img-thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:2px solid #e0e4ff;display:block;}
+.img-thumb-remove{position:absolute;top:-6px;left:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
 
 /* STATUS BAR */
 #status-bar{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:8000;background:#1e293b;color:#fff;padding:7px 18px;border-radius:0 0 12px 12px;font-size:12px;display:none;align-items:center;gap:7px;}
@@ -373,8 +378,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
       <input type="text" id="cb-subject" placeholder="נושא המייל...">
     </div>
     <textarea id="cb-body" placeholder="כתוב את המייל שלך..."></textarea>
+    <div id="img-previews" style="display:none;padding:8px 16px;display:none;flex-wrap:wrap;gap:8px;border-top:1px solid #f1f5f9;"></div>
     <div class="cb-footer">
       <button class="send-btn" id="send-btn" onclick="sendMail()">📤 שלח</button>
+      <label class="img-attach-btn" title="הוסף תמונה">
+        🖼️
+        <input type="file" id="img-input" accept="image/*" multiple style="display:none" onchange="attachImages(this)">
+      </label>
     </div>
   </div>
 </div>
@@ -578,7 +588,7 @@ async function sendMail(){
   const btn=document.getElementById('send-btn');
   btn.disabled=true; btn.textContent='⏳ שולח...';
 
-  const msg={id:Date.now()+'_'+Math.random().toString(36).slice(2,5),from:me.username,fromName:me.name,to,subject,body,time:Date.now(),read:false,deleted:false};
+  const msg={id:Date.now()+'_'+Math.random().toString(36).slice(2,5),from:me.username,fromName:me.name,to,subject,body,images:attachedImages.slice(),time:Date.now(),read:false,deleted:false};
 
   // Fetch recipient inbox
   const res=await ghGet(`inbox/${to}.json`);
@@ -687,7 +697,9 @@ function openMail(id){
       </div>
       <div class="meta-date">${new Date(m.time).toLocaleString('he-IL')}</div>
     </div>
-    <div class="mail-body">${m.body}</div>`;
+    <div class="mail-body">${m.body}</div>
+    ${m.images&&m.images.length?m.images.map(img=>`<img src="${img.data}" style="max-width:100%;border-radius:10px;margin-top:12px">`).join(''):''}`;
+
 }
 
 async function saveInbox(){
@@ -758,7 +770,7 @@ function openCompose(toUsername='',subject='',body=''){
   document.getElementById('compose-overlay').classList.add('show');
   setTimeout(()=>document.getElementById(toUsername?'cb-subject':'cb-to').focus(),100);
 }
-function closeCompose(){document.getElementById('compose-overlay').classList.remove('show'); selectedTo=null;}
+function closeCompose(){document.getElementById('compose-overlay').classList.remove('show'); selectedTo=null; attachedImages=[]; renderImgPreviews();}
 
 function filterUsers(q){
   selectedTo=null;
@@ -780,6 +792,52 @@ function selectUser(username,name){
   document.getElementById('cb-to').value=`${name} (@${username})`;
   document.getElementById('cb-users-list').innerHTML='';
   document.getElementById('cb-subject').focus();
+}
+
+// ── IMAGES ──
+let attachedImages=[];
+
+function attachImages(input){
+  const files=Array.from(input.files);
+  if(!files.length) return;
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      // compress
+      const img=new Image();
+      img.onload=()=>{
+        const maxW=800,maxH=800;
+        let w=img.width,h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        if(h>maxH){w=Math.round(w*maxH/h);h=maxH;}
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        const compressed=canvas.toDataURL('image/jpeg',0.75);
+        attachedImages.push({name:file.name,data:compressed});
+        renderImgPreviews();
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+
+function renderImgPreviews(){
+  const box=document.getElementById('img-previews');
+  if(!attachedImages.length){box.style.display='none';return;}
+  box.style.display='flex';
+  box.innerHTML=attachedImages.map((img,i)=>`
+    <div class="img-thumb-wrap">
+      <img class="img-thumb" src="${img.data}">
+      <button class="img-thumb-remove" onclick="removeImg(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeImg(i){
+  attachedImages.splice(i,1);
+  renderImgPreviews();
 }
 
 // ── MOBILE ──
