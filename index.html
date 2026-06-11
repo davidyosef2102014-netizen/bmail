@@ -180,6 +180,22 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 .ac-save{flex:1;background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:12px;color:#fff;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}
 .ac-cancel{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;color:#64748b;padding:12px 18px;font-size:13px;cursor:pointer;font-weight:600;}
 
+/* PROFILE SETUP */
+#setup-overlay{display:none;position:fixed;inset:0;z-index:5000;background:linear-gradient(135deg,#6c63ff,#a855f7);align-items:center;justify-content:center;}
+#setup-overlay.show{display:flex;}
+#setup-box{background:#fff;border-radius:28px;width:420px;max-width:92vw;box-shadow:0 40px 100px rgba(0,0,0,.3);overflow:hidden;animation:popIn .3s cubic-bezier(.34,1.56,.64,1);}
+.setup-hero{background:linear-gradient(135deg,#6c63ff,#a855f7);padding:32px 28px 24px;text-align:center;color:#fff;}
+.setup-hero .big-b{font-size:48px;font-weight:900;line-height:1;}
+.setup-hero p{font-size:14px;opacity:.85;margin-top:6px;}
+.setup-body{padding:24px 24px 8px;display:flex;flex-direction:column;gap:12px;}
+.setup-label{font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:2px;}
+.setup-input{width:100%;border:2px solid #e2e8f0;border-radius:12px;padding:13px 16px;font-size:14px;color:#1e293b;outline:none;direction:rtl;transition:border .2s;font-family:inherit;}
+.setup-input:focus{border-color:#6c63ff;}
+.setup-input::placeholder{color:#c4ccd8;}
+.setup-footer{padding:16px 24px 24px;}
+.setup-start{width:100%;background:linear-gradient(135deg,#6c63ff,#a855f7);border:none;border-radius:14px;color:#fff;padding:14px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(108,99,255,.35);transition:all .2s;}
+.setup-start:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,99,255,.45);}
+
 /* TOAST */
 .toast{
   position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
@@ -226,11 +242,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 
   <div class="sidebar-sep"></div>
 
-  <div class="account">
-    <div class="av">B</div>
+  <div class="account" onclick="openProfile()" style="cursor:pointer" title="ערוך פרופיל">
+    <div class="av" id="my-av">B</div>
     <div>
-      <div class="acc-name">BirgsOS User</div>
-      <div class="acc-addr">me@bmail.app</div>
+      <div class="acc-name" id="my-name">BirgsOS User</div>
+      <div class="acc-addr" id="my-addr">me@bmail.app</div>
     </div>
   </div>
 </div>
@@ -289,6 +305,29 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
     <div class="ac-footer">
       <button class="ac-cancel" onclick="closeAddContact()">ביטול</button>
       <button class="ac-save" onclick="saveContact()">💾 שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE SETUP -->
+<div id="setup-overlay">
+  <div id="setup-box">
+    <div class="setup-hero">
+      <div class="big-b">BMAIL</div>
+      <p>מייל חכם מבית BirgsOS — הגדר את החשבון שלך</p>
+    </div>
+    <div class="setup-body">
+      <div>
+        <div class="setup-label">השם שלך</div>
+        <input class="setup-input" id="setup-name" placeholder="לדוגמה: דוד יוסף" type="text">
+      </div>
+      <div>
+        <div class="setup-label">כתובת המייל שלך</div>
+        <input class="setup-input" id="setup-email" placeholder="example@gmail.com" type="email">
+      </div>
+    </div>
+    <div class="setup-footer">
+      <button class="setup-start" onclick="finishSetup()">🚀 התחל להשתמש ב-BMAIL</button>
     </div>
   </div>
 </div>
@@ -469,8 +508,15 @@ function sendMail(){
   const body=document.getElementById('c-body').value.trim();
   if(!to){toast('⚠️ הכנס כתובת נמען');return;}
   if(!body){toast('⚠️ המייל ריק');return;}
-  data.sent.unshift({id:Date.now(),from:'אני',addr:'me@bmail.app',to,subject,body,time:Date.now(),read:true,starred:false});
-  save(); closeCompose(); toast('📤 המייל נשלח!');
+  // שלח מייל אמיתי דרך תוכנת המייל
+  const mailtoLink='mailto:'+encodeURIComponent(to)
+    +'?subject='+encodeURIComponent(subject)
+    +'&body='+encodeURIComponent(body);
+  window.location.href=mailtoLink;
+  // שמור ב"נשלח"
+  const me=JSON.parse(localStorage.getItem('bmail_profile')||'{}');
+  data.sent.unshift({id:Date.now(),from:me.name||'אני',addr:me.email||'',to,subject,body,time:Date.now(),read:true,starred:false});
+  save(); closeCompose(); toast('📤 נפתחת תוכנת המייל לשליחה!');
 }
 function saveDraft(){
   const subject=document.getElementById('c-subject').value||'טיוטה';
@@ -543,7 +589,40 @@ function toast(msg){
   setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},2800);
 }
 
+// ── PROFILE ──
+function loadProfile(){
+  const p=JSON.parse(localStorage.getItem('bmail_profile')||'{}');
+  if(!p.name||!p.email){
+    document.getElementById('setup-overlay').classList.add('show');
+    return;
+  }
+  applyProfile(p);
+}
+function finishSetup(){
+  const name=document.getElementById('setup-name').value.trim();
+  const email=document.getElementById('setup-email').value.trim();
+  if(!name||!email){toast('⚠️ מלא שם וכתובת מייל');return;}
+  if(!email.includes('@')){toast('⚠️ כתובת מייל לא תקינה');return;}
+  const p={name,email};
+  localStorage.setItem('bmail_profile',JSON.stringify(p));
+  document.getElementById('setup-overlay').classList.remove('show');
+  applyProfile(p);
+  toast('✅ ברוך הבא, '+name+'!');
+}
+function applyProfile(p){
+  document.getElementById('my-name').textContent=p.name;
+  document.getElementById('my-addr').textContent=p.email;
+  document.getElementById('my-av').textContent=p.name[0].toUpperCase();
+}
+function openProfile(){
+  const p=JSON.parse(localStorage.getItem('bmail_profile')||'{}');
+  document.getElementById('setup-name').value=p.name||'';
+  document.getElementById('setup-email').value=p.email||'';
+  document.getElementById('setup-overlay').classList.add('show');
+}
+
 render();
+loadProfile();
 </script>
 </body>
 </html>
