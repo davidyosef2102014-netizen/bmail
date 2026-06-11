@@ -138,6 +138,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 
 @keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 
+/* TABS */
+.tabs{display:flex;margin:0 24px 0;border-bottom:2px solid #f1f5f9;}
+.tab{flex:1;text-align:center;padding:10px;font-size:13.5px;font-weight:700;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+.tab.active{color:#6c63ff;border-bottom-color:#6c63ff;}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 22px;border-radius:12px;font-size:13px;font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,.22);z-index:9999;animation:toastIn .3s ease;white-space:nowrap;}
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -150,20 +155,39 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
   <div class="setup-card">
     <div class="setup-top">
       <div class="logo-big">BMAIL</div>
-      <p>מערכת מייל פנימית — שלח וקבל מיילים<br>רק בין משתמשי BMAIL</p>
+      <p>מערכת מייל פנימית בין משתמשי BMAIL</p>
     </div>
-    <div class="setup-form">
+    <!-- TABS -->
+    <div class="tabs" style="margin-top:16px;">
+      <div class="tab active" id="tab-login" onclick="switchTab('login')">🔑 התחברות</div>
+      <div class="tab" id="tab-join" onclick="switchTab('join')">✨ הצטרפות</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form" class="setup-form">
+      <div>
+        <div class="s-label">שם משתמש</div>
+        <input class="s-input" id="l-user" placeholder="הכנס את שם המשתמש שלך..." type="text" oninput="checkLogin()">
+      </div>
+      <div id="l-error" style="color:#ef4444;font-size:12px;display:none;">שם המשתמש לא נמצא</div>
+    </div>
+    <div id="login-footer" class="setup-footer">
+      <button class="s-btn" id="l-btn" onclick="doLogin()" disabled>🔑 התחבר</button>
+    </div>
+
+    <!-- JOIN FORM -->
+    <div id="join-form" class="setup-form" style="display:none;">
       <div>
         <div class="s-label">השם שלך</div>
         <input class="s-input" id="s-name" placeholder="לדוגמה: דוד יוסף" type="text" oninput="checkSetup()">
       </div>
       <div>
         <div class="s-label">שם משתמש</div>
-        <input class="s-input" id="s-user" placeholder="לדוגמה: david (באנגלית בלי רווחים)" type="text" oninput="checkSetup()">
-        <div class="s-hint">זוהי הכתובת שלך: <span id="s-preview" style="color:#6c63ff;font-weight:700">@username</span></div>
+        <input class="s-input" id="s-user" placeholder="לדוגמה: david (באנגלית)" type="text" oninput="checkSetup()">
+        <div class="s-hint">הכתובת שלך: <span id="s-preview" style="color:#6c63ff;font-weight:700">@username</span></div>
       </div>
     </div>
-    <div class="setup-footer">
+    <div id="join-footer" class="setup-footer" style="display:none;">
       <button class="s-btn" id="s-start-btn" onclick="finishSetup()" disabled>🚀 הצטרף ל-BMAIL</button>
     </div>
   </div>
@@ -279,6 +303,41 @@ async function ghPut(path,data,sha,msg){
       {method:'PUT',headers:{Authorization:`token ${TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
     return r.ok;
   }catch(e){return false;}
+}
+
+// ── TABS ──
+function switchTab(tab){
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-join').classList.toggle('active', tab==='join');
+  document.getElementById('login-form').style.display = tab==='login'?'flex':'none';
+  document.getElementById('login-footer').style.display = tab==='login'?'block':'none';
+  document.getElementById('join-form').style.display = tab==='join'?'flex':'none';
+  document.getElementById('join-footer').style.display = tab==='join'?'block':'none';
+  document.getElementById('l-error').style.display='none';
+}
+
+// ── LOGIN ──
+function checkLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  document.getElementById('l-btn').disabled=!u;
+  document.getElementById('l-error').style.display='none';
+}
+
+async function doLogin(){
+  const username=document.getElementById('l-user').value.trim().toLowerCase();
+  if(!username) return;
+  const btn=document.getElementById('l-btn');
+  btn.disabled=true; btn.textContent='⏳ מחפש...';
+  const res=await ghGet(`users/${username}.json`);
+  if(!res){
+    document.getElementById('l-error').style.display='block';
+    btn.disabled=false; btn.textContent='🔑 התחבר'; return;
+  }
+  me=res.data;
+  localStorage.setItem('bmail_me',JSON.stringify(me));
+  document.getElementById('setup-screen').classList.add('hide');
+  initApp();
+  toast('ברוך השב, '+me.name+'! 👋');
 }
 
 // ── SETUP ──
