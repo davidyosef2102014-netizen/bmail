@@ -660,7 +660,7 @@ function setFolder(f,el){
   document.getElementById('empty-pane').style.display='flex';
   document.getElementById('mail-view').style.display='none';
 
-  if(f==='sent'&&!sentBox.length) loadSent();
+  if(f==='sent') loadSent();
   else render();
 }
 
