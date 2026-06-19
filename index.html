@@ -136,6 +136,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
 .img-thumb-wrap{position:relative;display:inline-block;}
 .img-thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:2px solid #e0e4ff;display:block;}
 .img-thumb-remove{position:absolute;top:-6px;left:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.file-chip{display:flex;align-items:center;gap:7px;background:#f0f2ff;border:1px solid #e0e4ff;border-radius:10px;padding:7px 10px;font-size:12px;color:#374151;position:relative;}
+.file-chip-icon{font-size:20px;}
+.file-chip-info{display:flex;flex-direction:column;gap:1px;}
+.file-chip-name{font-weight:600;color:#1e293b;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.file-chip-size{color:#94a3b8;font-size:11px;}
+.file-chip-remove{background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-right:auto;flex-shrink:0;}
+.mail-file-link{display:inline-flex;align-items:center;gap:8px;background:#f0f2ff;border:1px solid #e0e4ff;border-radius:10px;padding:9px 14px;font-size:13px;color:#6c63ff;text-decoration:none;font-weight:600;margin:4px 4px 4px 0;transition:background .2s;}
+.mail-file-link:hover{background:#e0e4ff;}
 
 /* STATUS BAR */
 #status-bar{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:8000;background:#1e293b;color:#fff;padding:7px 18px;border-radius:0 0 12px 12px;font-size:12px;display:none;align-items:center;gap:7px;}
@@ -379,11 +387,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;height:100vh;dis
     </div>
     <textarea id="cb-body" placeholder="כתוב את המייל שלך..."></textarea>
     <div id="img-previews" style="display:none;padding:8px 16px;display:none;flex-wrap:wrap;gap:8px;border-top:1px solid #f1f5f9;"></div>
+    <div id="file-previews" style="display:none;padding:8px 16px;flex-wrap:wrap;gap:8px;border-top:1px solid #f1f5f9;"></div>
     <div class="cb-footer">
       <button class="send-btn" id="send-btn" onclick="sendMail()">📤 שלח</button>
       <label class="img-attach-btn" title="הוסף תמונה">
         🖼️
         <input type="file" id="img-input" accept="image/*" multiple style="display:none" onchange="attachImages(this)">
+      </label>
+      <label class="img-attach-btn" title="הוסף קובץ">
+        📎
+        <input type="file" id="file-input" multiple style="display:none" onchange="attachFiles(this)">
       </label>
     </div>
   </div>
@@ -588,7 +601,7 @@ async function sendMail(){
   const btn=document.getElementById('send-btn');
   btn.disabled=true; btn.textContent='⏳ שולח...';
 
-  const msg={id:Date.now()+'_'+Math.random().toString(36).slice(2,5),from:me.username,fromName:me.name,to,subject,body,images:attachedImages.slice(),time:Date.now(),read:false,deleted:false};
+  const msg={id:Date.now()+'_'+Math.random().toString(36).slice(2,5),from:me.username,fromName:me.name,to,subject,body,images:attachedImages.slice(),files:attachedFiles.slice(),time:Date.now(),read:false,deleted:false};
 
   // Fetch recipient inbox
   const res=await ghGet(`inbox/${to}.json`);
@@ -698,7 +711,8 @@ function openMail(id){
       <div class="meta-date">${new Date(m.time).toLocaleString('he-IL')}</div>
     </div>
     <div class="mail-body">${m.body}</div>
-    ${m.images&&m.images.length?m.images.map(img=>`<img src="${img.data}" style="max-width:100%;border-radius:10px;margin-top:12px">`).join(''):''}`;
+    ${m.images&&m.images.length?`<div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px">`+m.images.map(img=>`<img src="${img.data}" style="max-width:100%;border-radius:10px">`).join('')+`</div>`:''}
+    ${m.files&&m.files.length?`<div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px">`+m.files.map(f=>`<a class="mail-file-link" href="${f.data}" download="${f.name}">${fileIcon(f.name)} ${f.name} <span style="color:#94a3b8;font-weight:400;font-size:11px">${fmtSize(f.size)}</span></a>`).join('')+`</div>`:''}`;
 
 }
 
@@ -770,7 +784,7 @@ function openCompose(toUsername='',subject='',body=''){
   document.getElementById('compose-overlay').classList.add('show');
   setTimeout(()=>document.getElementById(toUsername?'cb-subject':'cb-to').focus(),100);
 }
-function closeCompose(){document.getElementById('compose-overlay').classList.remove('show'); selectedTo=null; attachedImages=[]; renderImgPreviews();}
+function closeCompose(){document.getElementById('compose-overlay').classList.remove('show'); selectedTo=null; attachedImages=[]; attachedFiles=[]; renderImgPreviews(); renderFilePreviews();}
 
 function filterUsers(q){
   selectedTo=null;
@@ -796,6 +810,7 @@ function selectUser(username,name){
 
 // ── IMAGES ──
 let attachedImages=[];
+let attachedFiles=[];
 
 function attachImages(input){
   const files=Array.from(input.files);
@@ -839,6 +854,42 @@ function removeImg(i){
   attachedImages.splice(i,1);
   renderImgPreviews();
 }
+
+// ── FILES ──
+const FILE_ICONS={'pdf':'📄','doc':'📝','docx':'📝','xls':'📊','xlsx':'📊','ppt':'📋','pptx':'📋','txt':'📃','zip':'🗜️','mp3':'🎵','mp4':'🎬'};
+function fileIcon(name){const ext=(name.split('.').pop()||'').toLowerCase();return FILE_ICONS[ext]||'📁';}
+function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
+
+function attachFiles(input){
+  const files=Array.from(input.files);
+  files.forEach(file=>{
+    if(file.size>5*1024*1024){toast('⚠️ הקובץ גדול מ-5MB: '+file.name);return;}
+    const reader=new FileReader();
+    reader.onload=e=>{
+      attachedFiles.push({name:file.name,size:file.size,type:file.type,data:e.target.result});
+      renderFilePreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+
+function renderFilePreviews(){
+  const box=document.getElementById('file-previews');
+  if(!attachedFiles.length){box.style.display='none';return;}
+  box.style.display='flex';
+  box.innerHTML=attachedFiles.map((f,i)=>`
+    <div class="file-chip">
+      <span class="file-chip-icon">${fileIcon(f.name)}</span>
+      <div class="file-chip-info">
+        <span class="file-chip-name">${f.name}</span>
+        <span class="file-chip-size">${fmtSize(f.size)}</span>
+      </div>
+      <button class="file-chip-remove" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeFile(i){attachedFiles.splice(i,1);renderFilePreviews();}
 
 // ── MOBILE ──
 const isMobile=()=>window.innerWidth<=700;
